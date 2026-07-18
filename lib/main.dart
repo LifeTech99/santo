@@ -4,6 +4,9 @@ import 'package:flutter_map_mbtiles/flutter_map_mbtiles.dart';
 import 'package:latlong2/latlong.dart';
 
 import 'services/mbtiles_service.dart';
+import 'package:geolocator/geolocator.dart';
+//import 'services/location_service.dart';
+import 'dart:async';
 
 void main() {
   runApp(const MyApp());
@@ -30,11 +33,15 @@ class OfflineMapScreen extends StatefulWidget {
 
 class _OfflineMapScreenState extends State<OfflineMapScreen> {
   MbTilesTileProvider? tileProvider;
+  LatLng? shepherdLocation;
+  StreamSubscription<Position>? positionStream;
+  final MapController mapController = MapController();
 
   @override
   void initState() {
     super.initState();
     _loadMbtiles();
+    startLocationTracking();
   }
 
   Future<void> _loadMbtiles() async {
@@ -49,8 +56,41 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
     });
   }
 
+
+
+  Future<void> startLocationTracking() async {
+    const locationSettings = LocationSettings(
+    accuracy: LocationAccuracy.best,
+    distanceFilter: 1,
+    );
+
+    positionStream = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
+    ).listen((Position position) {
+
+      final newLocation = LatLng(
+      position.latitude,
+      position.longitude,
+      );
+
+      setState(() {
+      shepherdLocation = newLocation;
+      });
+
+      mapController.move(
+      newLocation,
+      mapController.camera.zoom,
+      );
+
+      debugPrint(
+        'Location: ${position.latitude}, ${position.longitude}',
+      );
+    });
+  }
+
   @override
   void dispose() {
+    positionStream?.cancel();
     tileProvider?.dispose();
     super.dispose();
   }
@@ -70,6 +110,7 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
         title: const Text('Offline Map'),
       ),
       body: FlutterMap(
+        mapController: mapController,
         options: const MapOptions(
           initialCenter: LatLng(
             27.68665,
@@ -84,18 +125,17 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
 
           MarkerLayer(
             markers: [
-              Marker(
-                point: const LatLng(
-                  27.68665,
-                  85.29280,
+              if (shepherdLocation != null)
+                Marker(
+                  point: shepherdLocation!,
+                  width: 40,
+                  height: 40,
+                  child: const Icon(
+                    Icons.person_pin_circle,
+                    size: 40,
+                    color: Colors.blue,
+                  ),
                 ),
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.location_on,
-                  size: 40,
-                ),
-              ),
             ],
           ),
         ],
