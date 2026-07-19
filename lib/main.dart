@@ -40,8 +40,42 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
   @override
   void initState() {
     super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
     _loadMbtiles();
-    startLocationTracking();
+
+    bool granted =
+        await requestLocationPermission();
+
+    if (granted) {
+      startLocationTracking();
+    }
+  }
+
+  Future<bool> requestLocationPermission() async {
+    bool serviceEnabled =
+        await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      return false;
+    }
+
+    LocationPermission permission =
+        await Geolocator.checkPermission();
+
+    if (permission == LocationPermission.denied) {
+      permission =
+          await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return false;
+    }
+
+    return true;
   }
 
   Future<void> _loadMbtiles() async {
@@ -67,25 +101,24 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
     positionStream = Geolocator.getPositionStream(
       locationSettings: locationSettings,
     ).listen((Position position) {
+        final newLocation = LatLng(
+          position.latitude,
+          position.longitude,
+        );
 
-      final newLocation = LatLng(
-      position.latitude,
-      position.longitude,
-      );
+        setState(() {
+          shepherdLocation = newLocation;
+        });
 
-      setState(() {
-      shepherdLocation = newLocation;
-      });
-
-      mapController.move(
-      newLocation,
-      mapController.camera.zoom,
-      );
-
-      debugPrint(
-        'Location: ${position.latitude}, ${position.longitude}',
-      );
-    });
+        mapController.move(
+          newLocation,
+          mapController.camera.zoom,
+        );
+      },
+      onError: (error) {
+        debugPrint('Location error: $error');
+      },
+    );
   }
 
   @override
