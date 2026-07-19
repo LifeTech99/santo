@@ -125,18 +125,6 @@ class _OfflineMapScreenState extends State<OfflineMapScreen> {
 
           MarkerLayer(
             markers: [
-              Marker(
-                point: const LatLng(
-                  27.68665,
-                  85.29280,
-                ),
-                width: 40,
-                height: 40,
-                child: const Icon(
-                  Icons.location_on,
-                  size: 40,
-                ),
-              ),
               if (shepherdLocation != null)
                 Marker(
                   point: shepherdLocation!,
